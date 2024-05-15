@@ -1,0 +1,4 @@
+(executable
+ (public_name litmusocaml)
+ (name main)
+ (libraries litmusocaml domainslib))
