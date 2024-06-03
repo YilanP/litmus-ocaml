@@ -22,87 +22,37 @@ module Barrier = struct
       done
 end
 
-module Ret = struct
-  type t = { r0: int option; r1: int option }
-end    
-
 module CodeSegments = struct
-  let code0 xf yf =
-    xf := 1;
-    let r0 = !yf in
-    { Ret.r0 = Some r0; r1 = None }
+  let code0 x y r0  =
+    x := 1;
+    r0 := !y;
+    ()
 
-  let code1 xf yf =
-    yf := 1;
-    let r1 = !xf in
-    { Ret.r0 = None; r1 = Some r1 }
-
-  let code0_2plus2W xf yf =
-    xf := 2;
-    yf := 1;
-    { Ret.r0 = None; r1 = None }
-  
-  let code1_2plus2W xf yf =
-    yf := 2;
-    xf := 1;
-    { Ret.r0 = None; r1 = None }
-  
-  let code0_LB xf yf =
-    let r0 = !xf in
-    yf := 1;
-    { Ret.r0 = Some r0; r1 = None }
-  
-  let code1_LB xf yf =
-    let r1 = !yf in
-    xf := 1;
-    { Ret.r0 = None; r1 = Some r1 }
-  
-  let code0_MP xf yf =
-    xf := 1;
-    yf := 1;
-    { Ret.r0 = None; r1 = None }
-  
-  let code1_MP xf yf =
-    let r0 = !yf in
-    let r1 = !xf in
-    { Ret.r0 = Some r0; r1 = Some r1 }
-  
-  let code0_R xf yf =
-    xf := 1;
-    yf := 1;
-    { Ret.r0 = None; r1 = None }
-  
-  let code1_R xf yf =
-    yf := 2;
-    let r0 = !xf in
-    { Ret.r0 = Some r0; r1 = None }
-  
+  let code1 x y r1 =
+    y := 1;
+    r1 := !x;
+    ()
   let code0_S xf yf =
     xf := 2;
     yf := 1;
-    { Ret.r0 = None; r1 = None }
+    ()
+    
   
-  let code1_S xf yf =
-    let r0 = !yf in
+  let code1_S xf yf r0 =
+    r0 := !yf ;
     xf := 1;
-    { Ret.r0 = Some r0; r1 = None }
-  
-  let code0_SB xf yf =
-    xf := 1;
-    let r0 = !yf in
-    { Ret.r0 = Some r0; r1 = None }
-  
-  let code1_SB xf yf =
-    yf := 1;
-    let r1 = !xf in
-    { Ret.r0 = None; r1 = Some r1 }
+    ()  
+    
 end
 
 module Env = struct
-  type t = { x: int ref array; y: int ref array;
-             barrier: Barrier.t;
-             r0: int array; r1: int array;
-             x_indirect: int ref array; y_indirect: int ref array }
+  type t = { 
+  x: int ref array; 
+  y: int ref array;
+  r0: int ref array; 
+  r1: int ref array;
+  barrier: Barrier.t;
+  }
 
   let shuffle_array arr =
     let n = Array.length arr in
@@ -116,27 +66,20 @@ module Env = struct
   let make sz =
     let x = Array.init sz (fun _ -> ref 0)
     and y = Array.init sz (fun _ -> ref 0)
-    and r0 = Array.make sz 0
-    and r1 = Array.make sz 0    
+    and r0 = Array.init sz (fun _ -> ref 0)
+    and r1 = Array.init sz (fun _ -> ref 0)
     and barrier = Barrier.make sz in
-    let x_indirect = Array.copy x
-    and y_indirect = Array.copy y in
-    shuffle_array x_indirect;
-    shuffle_array y_indirect;
-    { x; y; r0; r1; barrier; x_indirect; y_indirect }
+    { x; y; r0; r1;barrier }
 
   let reinit env =
     let sz = Array.length env.x in
     for k = 0 to sz - 1 do
       env.x.(k) := 0;
       env.y.(k) := 0;
-      env.x_indirect.(k) := 0;
-      env.y_indirect.(k) := 0;
+      env.r0.(k) := 0;
+      env.r1.(k) := 0;
     done ;
     Barrier.reinit env.barrier
-
-  let xf env k = if Config.indirect_mode then env.x_indirect.(k) else env.x.(k)
-  let yf env k = if Config.indirect_mode then env.y_indirect.(k) else env.y.(k)
 end
 
 let env = Env.make Config.sz
@@ -147,13 +90,8 @@ let run0 code =
   let sz = Array.length env.barrier in
   for k = 0 to sz - 1 do
     Barrier.wait b 0 k;
-    let { Ret.r0; r1 } = code (xf env k) (yf env k) in
-    (match r0 with
-     | Some v -> env.r0.(k) <- v
-     | None -> ());
-    (match r1 with
-     | Some v -> env.r1.(k) <- v
-     | None -> ())
+    code (env.x.(k)) (env.y.(k))  
+    
   done;
   (env.r0, env.r1)
 
@@ -163,26 +101,23 @@ let run1 code =
   let sz = Array.length env.barrier in
   for k = 0 to sz - 1 do
     Barrier.wait b 1 k;
-    let { Ret.r0; r1 } = code (xf env k) (yf env k) in
-    (match r0 with
-     | Some v -> env.r0.(k) <- v
-     | None -> ());
-    (match r1 with
-     | Some v -> env.r1.(k) <- v
-     | None -> ())
+    code (env.x.(k)) (env.y.(k)) (env.r0.(k)) 
   done;
-  (env.r0, env.r1)
 
-module Key = struct
-  type t = { r0: int; r1: int }
-             
-  let compare t1 t2 = match Int.compare t1.r0 t2.r0 with
-    | 0 -> Int.compare t1.r1 t2.r1
-    | r -> r
-        
-  let pp chan k =
-    Printf.fprintf chan "0:r0=%d; 1:r1=%d;" k.r0 k.r1
-end
+  module Key = struct
+    type t = { r0: int; x: int; y: int }  (* Added r2 to the record *)
+  
+    let compare t1 t2 =
+      let c = Int.compare t1.r0 t2.r0 in
+      if c <> 0 then c else
+        let c = Int.compare t1.x t2.x in
+        if c <> 0 then c else
+          Int.compare t1.y t2.y
+  
+    let pp chan k =
+      Printf.fprintf chan "0:r0=%d; 1:x=%d; 2:y=%d;" k.r0 k.x k.y  (* Updated to print the third key *)
+  end
+  
 
 module type KeySig = sig
   type t
@@ -217,7 +152,7 @@ let run_scenario scenario_name code0 code1 =
     Domain.join p0;
     Domain.join p1;
     for k = 0 to Config.sz - 1 do
-      let key = { Key.r0 = env.r0.(k); Key.r1 = env.r1.(k) } in 
+      let key = { Key.r0 = !(env.r0.(k)); Key.x = !(env.x.(k)); Key.y = !(env.y.(k)) } in 
       out := Out.see !out key
     done
   done;
@@ -226,9 +161,4 @@ let run_scenario scenario_name code0 code1 =
 
 
 let () =
-  run_scenario "2+2W" CodeSegments.code0_2plus2W CodeSegments.code1_2plus2W;
-  run_scenario "LB" CodeSegments.code0_LB CodeSegments.code1_LB;
-  run_scenario "MP" CodeSegments.code0_MP CodeSegments.code1_MP;
-  run_scenario "R" CodeSegments.code0_R CodeSegments.code1_R;
-  run_scenario "S" CodeSegments.code0_S CodeSegments.code1_S;
-  run_scenario "SB" CodeSegments.code0_SB CodeSegments.code1_SB
+  run_scenario "S" CodeSegments.code0_S CodeSegments.code1_S
