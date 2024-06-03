@@ -1,0 +1,29 @@
+
+** Conflict (reduce/reduce) in state 27.
+** Tokens involved: EQUAL ASSIGN
+** The following explanations concentrate on token EQUAL.
+** This state is reached from main after reading:
+
+Arch Testname Cycle Init Code_Block EXISTS LPAREN STRING
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+main 
+Arch Testname Cycle Init Code_Block Condition EOF 
+                                    EXISTS LPAREN Predicate pred_list RPAREN 
+                                                  (?)
+
+** In state 27, looking ahead at EQUAL, reducing production
+** Memory -> STRING
+** is permitted because of the following sub-derivation:
+
+Memory EQUAL NUMBER // lookahead token appears
+STRING . 
+
+** In state 27, looking ahead at EQUAL, reducing production
+** Register -> STRING
+** is permitted because of the following sub-derivation:
+
+Register EQUAL NUMBER // lookahead token appears
+STRING . 

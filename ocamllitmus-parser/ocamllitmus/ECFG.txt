@@ -1,0 +1,33 @@
+##V1 - Problem with body of Ocaml funcs
+S -> Arch [" "] Testname Init Cycle Codes Condition
+Arch -> String
+Testname -> String
+Init -> "{" {Memory "=" Number} "}"
+Cycle -> "\"" String "\""
+Codes -> "{"{Code}"}"
+Code -> "let" "P" Number "=" Body
+Body -> [^\}]+
+Condition -> "exists" "(" Predicate {Logicsymb Predicate} ")"
+Predicate -> (Register | Memory) "=" Number
+Register -> "r" Number
+Memory -> [a-p,s-z] {[0-9]}
+Number -> [0-9] {[0-9]}
+Logicsymb -> "&&" | "||"
+String -> [a-zA-Z0-9_]+
+
+##V2 - The codes, is just something between brackets. Analyze this after.
+S -> Arch [" "] Testname Init Cycle Codes Condition
+Arch -> String
+Testname -> String
+Init -> "{" {Memory "=" Number} "}"
+Cycle -> "\"" String "\""
+Codes -> "{"{Code}"}"
+Code -> Body
+Body -> [^\}]+
+Condition -> "exists" "(" Predicate {Logicsymb Predicate} ")"
+Predicate -> (Register | Memory) "=" Number
+Register -> "r" Number
+Memory -> [a-p,s-z] {[0-9]}
+Number -> [0-9] {[0-9]}
+Logicsymb -> "&&" | "||"
+String -> [a-zA-Z0-9_]+

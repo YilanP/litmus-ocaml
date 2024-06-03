@@ -1,0 +1,1 @@
+X86 MyTest "Cycle" { x = 100; mem2=200 } { let P1 = x:=0; r0:=x; let P2 = x:=0; r0:=x; } exists (r1 = 100 && mem1 = 100 || r2 = 200)
