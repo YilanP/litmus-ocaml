@@ -1,0 +1,23 @@
+X86 6.SB "Cycle" { x=0;y=0;z=0;a=0;b=0;c=0 }
+{ 
+let p1 = 
+    x := 1;
+    r1 := !y;
+let p2 = 
+    y := 1;
+    r2 := !z;
+let p3 = 
+    z := 1;
+    r3 := !a;
+let p4 = 
+    a := 1;
+    r4 := !b;
+let p5 = 
+    b := 1;
+    r5 := !c;
+let p6 =
+    c := 1;
+    r6 := !x;
+
+ } 
+exists (r1 = 100 && mem1 = 100 || r2 = 200)

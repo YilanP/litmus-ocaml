@@ -1,0 +1,7 @@
+X86 S "Cycle" { x = 0;y=0; }
+{ let p1 = x := 2;
+    y := 1;
+let p2 = r0 := !y ;
+    x := 1;
+ } 
+exists (r1 = 100 && mem1 = 100 || r2 = 200)
