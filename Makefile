@@ -37,7 +37,10 @@ clean:
 run:
 	ocamlc -o out output.ml
 	./out 
-
+cleanmake:
+	make clean
+	make
+	./main < $(f)
 c:
 	./main < $(f)
 

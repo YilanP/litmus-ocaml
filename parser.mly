@@ -4,30 +4,30 @@ open Ast
 
 %token <string>  STRING
 %token <int> NUMBER
-%token <string> REGISTER
-%token <string> PROCESSOR
-%token LBRACE RBRACE SEMICOLON DEREFERENCE QUOTE LET ASSIGN EQUAL EXISTS LPAREN RPAREN AND OR EOF 
-%token ARCH_X86 ARCH_X86_64
+%token <int> REGISTER
+%token <int> RETURN_MODULE
+%token <int> PROCESSOR
+%token SPACE LBRACE RBRACE SEMICOLON COLON R RET IN PERIOD DEREFERENCE QUOTE LET ASSIGN EQUAL EXISTS LPAREN RPAREN AND OR EOF ATOMIC_SET ATOMIC_GET
+%token ARCH_Ocaml
+%right AND OR
 %type <Ast.s> main
 %start main
 
 %%
 
 main:
-| arch = Arch testname = Testname cycle = Cycle init = Init codes = Code_Block condition = Condition EOF
+| arch = Arch testname = Testname cycle = Cycle? init = Init codes = Code_Block condition = Condition EOF
     { 
       { arch = arch; testname = testname; cycle = cycle; init = init; codes = codes; condition = condition }
     }
 
 Arch:
-| ARCH_X86 { X86 }
-| ARCH_X86_64 { X86_64}
+| ARCH_Ocaml { ArchOcaml}
 
 Testname:
 | STRING  { $1 }
 
-Memory:
-|STRING { $1 }
+
 Cycle:
 | QUOTE STRING QUOTE { $2 }
 
@@ -35,45 +35,62 @@ Init:
 | LBRACE init_contents RBRACE { $2 }
 
 init_contents:
-| /* empty */ { [] }
+| { [] }
 | init_item { [$1] }
 | init_item SEMICOLON init_contents { $1 :: $3 }
 
 init_item:
-| Memory EQUAL NUMBER { ($1, $3) }
+| STRING EQUAL NUMBER { (MemAny $1, $3) }
 
 
 Code_Block:
-| LBRACE Codes RBRACE { $2 }
+| Codes  { $1 }
 
 Codes:
 | { [] }
 | Code Codes { $1 :: $2 }
 
 Code:
-| LET PROCESSOR EQUAL Body { ($2, $4) }
+| LET PROCESSOR Parameters EQUAL Body Codepart2  { ($2, $3 ,$5, $6) }
+
+Codepart2:
+|LBRACE Returns RBRACE { print_endline "GAYyyyyy"; $2 }
+Parameters:
+| { [] }
+| Parameter Parameters { $1 :: $2 }
+
+Parameter:
+| STRING { $1 }
+
+
 
 Body:
 | { [] }
-| body_content { [$1] } 
-| body_content SEMICOLON Body { $1 :: $3 }
+| body_content Body { $1 :: $2 }
+
+Returns:
+| { [] }
+| RETURN_MODULE PERIOD REGISTER{ print_endline "G2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAY";[($1,$3)] }
+| RETURN_MODULE PERIOD REGISTER SEMICOLON Returns { print_endline "G2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAY";[($1,$3)] }
 
 body_content:
-| REGISTER ASSIGN DEREFERENCE Memory  { RegRead ($1, $4) }
-| Memory ASSIGN NUMBER  { MemAssign ($1, $3) }
+| LET REGISTER EQUAL DEREFERENCE STRING SEMICOLON  { RegRead ($2, MemRef $5) }
+| STRING ASSIGN NUMBER SEMICOLON{ MemAssign (MemRef $1, $3) }
+| ATOMIC_SET STRING NUMBER SEMICOLON{ MemAtomicAssign (MemAtomic $2,  $3) }
+| LET REGISTER EQUAL ATOMIC_GET STRING IN  { RegAtomicRead ($2, MemAtomic $5) }
 
-Condition:
-| EXISTS LPAREN Predicate pred_list RPAREN { ($3 :: $4, []) }
 
 Predicate:
-| REGISTER EQUAL NUMBER { PredReg ($1, $3) }
-| Memory EQUAL NUMBER { PredMem ($1, $3) }
+| NUMBER COLON REGISTER EQUAL NUMBER { PredReg (($1, $3), $5) }
+| STRING EQUAL NUMBER { PredMem (MemAny $1, $3) }
 
 
-pred_list:
-| { [] }
-| Logicsymb Predicate pred_list { $2 :: $3 }
+Condition:
+  | EXISTS LogicalOp { $2 }
 
-Logicsymb:
-| AND { And }
-| OR { Or }
+LogicalOp:
+  | Predicate { Predicate $1 }
+  | LogicalOp AND LogicalOp { And ($1, $3) }
+  | LogicalOp OR LogicalOp { Or ($1, $3) }
+  | LPAREN LogicalOp RPAREN { $2 }
+

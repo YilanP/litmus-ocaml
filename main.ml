@@ -8,7 +8,6 @@ let () =
   let lexbuf = Lexing.from_channel stdin in
   try
     let result = Parser.main Lexer.token lexbuf in
-    print_endline (Ast.to_string result) ;
     generate_code result output_name
   with
   | Parser.Error ->

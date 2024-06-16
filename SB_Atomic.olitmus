@@ -1,0 +1,13 @@
+Ocaml SB_Atomic { x = 0;y=0; }
+
+let p0 x y =
+    Atomic.set x 1;
+    let r0 = Atomic.get y in
+    {Ret0.r0;}
+
+let p2 x y =
+    Atomic.set y 1;
+    let r2 = Atomic.get x in
+    { Ret2.r2 }
+    
+exists (0:r0 = 0 && 2:r2 = 0)

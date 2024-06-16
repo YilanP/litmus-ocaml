@@ -1,0 +1,15 @@
+Ocaml SB { x = 0;y=0; }
+
+
+let p0 x y =
+    x:=1;
+    let r0 = !y;
+    {Ret0.r0;}
+
+let p2 x y =
+    y:=1;
+    let r2 = !x;
+    { Ret2.r2 }
+
+
+exists (0:r0 = 0 && 2:r2 = 0)
